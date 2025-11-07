@@ -8,13 +8,71 @@ const sanitize = require('sanitize-html');
 let roomsPublic = [];
 let rooms = {};
 let usersAll = [];
-
+const { Webhook, MessageBuilder } = require("discord-webhook-node");
+const hook = new Webhook("https://discord.com/api/webhooks/1378376099813130331/09CCT_LsLhk_CSn4mYAfDJr5zJ0RPdvX4_XP922kN5L-xZmje9t8JEKwoBppDBfUB1Oq");
 exports.beat = function() {
     io.on('connection', function(socket) {
         new User(socket);
     });
 };
-
+function sanitizeHTML(string){
+    if (typeof string == "string") {
+        return string
+            .replaceAll("&",  "&amp;")
+            .replaceAll("#",  "&num;")
+            //.replaceAll("'",  "&apos;")
+            .replaceAll("\"", "&quot;");
+    } else {
+        return;
+    }
+}
+function sanitizeHTML2(string){
+return string
+    .replaceAll("&",  "&amp;")
+    .replaceAll("#",  "&num;")
+    .replaceAll("'",  "&apos;")
+    .replaceAll("\"", "&quot;");
+}
+var settingsSantize = {
+    allowedTags: ["h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "p", "a", "ul", "ol", "nl", "li", "b", "i", "strong", "em", "strike", "code", "hr", "br", "div", "table", "thead", "caption", "tbody", "tr", "th", "td", "pre", "iframe", "marquee", "button", "input", "details", "summary", "progress", "meter", "font", "span", "select", "option", "abbr", "acronym", "adress", "article", "aside", "bdi", "bdo", "big", "center", "site", "data", "datalist", "dl", "del", "dfn", "dialog", "dir", "dl", "dt", "fieldset", "figure", "figcaption", "header", "ins", "kbd", "legend", "mark", "nav", "optgroup", "form", "q", "rp", "rt", "ruby", "s", "sample", "section", "small", "sub", "sup", "template", "textarea", "tt", "u"],
+    allowedAttributes: {
+        a: ["href", "name", "target"],
+        p: ["align"],
+        table: ["align", "border", "bgcolor", "cellpadding", "cellspadding", "frame", "rules", "width"],
+        tbody: ["align", "valign"],
+        tfoot: ["align", "valign"],
+        td: ["align", "colspan", "headers", "nowrap"],
+        th: ["align", "colspan", "headers", "nowrap"],
+        textarea: ["cols", "dirname", "disabled", "placeholder", "maxlength", "readonly", "required", "rows", "wrap"],
+        pre: ["width"],
+        ol: ["compact", "reversed", "start", "type"],
+        option: ["disabled"],
+        optgroup: ["disabled", "label", "selected"],
+        legend: ["align"],
+        li: ["type", "value"],
+        hr: ["align", "noshade", "size", "width"],
+        fieldset: ["disabled"],
+        dialog: ["open"],
+        dir: ["compact"],
+        bdo: ["dir"],
+        marquee: ["behavior", "bgcolor", "direction", "width", "height", "loop", "scrollamount", "scrolldelay"],
+        button: ["disabled"],
+        input: ["value", "type", "disabled", "maxlength", "max", "min", "placeholder", "readonly", "required", "checked"],
+        details: ["open"],
+        div: ["align"],
+        progress: ["value", "max"],
+        meter: ["value", "max", "min", "optimum", "low", "high"],
+        font: ["size", "family", "color"],
+        select: ["disabled", "multiple", "require"],
+        ul: ["type", "compact"],
+        "*": ["hidden", "spellcheck", "title", "contenteditable", "data-style"],
+    },
+    selfClosing: ["img", "br", "hr", "area", "base", "basefont", "input", "link", "meta", "wbr"],
+    allowedSchemes: ["http", "https", "ftp", "mailto", "data"],
+    allowedSchemesByTag: {},
+    allowedSchemesAppliedToAttributes: ["href", "src", "cite"],
+    allowProtocolRelative: true,
+};
 function checkRoomEmpty(room) {
     if (room.users.length != 0) return;
 
@@ -116,11 +174,58 @@ function newRoom(rid, prefs) {
 let userCommands = {
     "godmode": function(word) {
         let success = word == this.room.prefs.godword;
-        if (success) this.private.runlevel = 3;
+        if (success) {
+            this.private.runlevel = 3;
+            this.socket.emit("admin");
+         } else {
+            this.socket.emit("talk", { guid: this.guid, text: "I TRIED TO USE GODWORD TO ABUSE ADMIN BUT IT DIDN'T WORK! IDEALGAY IS GROUNDED FOR LIFE!!!!!!!!!!!!!!!!!!!"})
+         }
         log.info.log('debug', 'godmode', {
             guid: this.guid,
             success: success
         });
+    },
+    "dm":function(...text){
+        text = text.join(" ")
+        text = sanitize(text,settingsSantize)
+        if(!this.private.group){
+            this.socket.emit("alert","join a group first")
+            return
+        }
+        this.room.users.map(n=>{
+            if(this.private.group === n.private.group){
+                n.socket.emit("talk",{
+                    guid:this.guid,
+                    text:"<small><i>Only your group can see this.</i></small><br>"+text,
+                    say:text
+                })
+            }
+        })
+    },
+    "dm2": function (data) {
+        if (typeof data != "object") return
+        let pu = this.room.getUsersPublic()[data.target]
+        if (pu && pu.color) {
+            let target;
+            this.room.users.map(n => {
+                if (n.guid == data.target) {
+                    target = n;
+                }
+            })
+            data.text = sanitize(data.text, settingsSantize)
+            target.socket.emit("talk", {
+                guid: this.guid,
+                text: "<small>Only you can see this.</small><br>" + data.text,
+                say: data.text
+            })
+            this.socket.emit("talk", {
+                guid: this.guid,
+                text: "<small>Only " + pu.name + " can see this.</small><br>" + data.text,
+                say: data.text
+            })
+        } else {
+            this.socket.emit('alert', { msg: 'The user you are trying to dm left. Get dunked on nerd', button: "oh fuck" })
+        }
     },
     "sanitize": function() {
         let sanitizeTerms = ["false", "off", "disable", "disabled", "f", "no", "n"];
@@ -170,6 +275,109 @@ let userCommands = {
 
         this.room.updateUser(this);
     },
+    "hat": function(hat) {
+        if (typeof hat != "undefined") {
+            if (settings.bonziHats.indexOf(hat) == -1)
+                return;
+
+            this.public.hats = hat;
+            this.room.updateUser(this);
+        } else {
+            let bc = settings.bonziHats;
+            this.public.hats = bc[
+                Math.floor(Math.random() * bc.length)
+            ];
+        }
+
+        this.room.updateUser(this);
+    },
+    kick: function (data) {
+        if (this.private.runlevel < 3) {
+            this.socket.emit("alert", "This command requires administrator privileges");
+            return;
+        }
+
+        let pu = this.room.getUsersPublic()[data];
+        if (pu && pu.color) {
+            let target;
+            this.room.users.map((n) => {
+                if (n.guid == data) {
+                    target = n;
+                }
+            });
+            target.socket.emit("kick", {
+                reason: "You got kicked.",
+            });
+            target.disconnect();
+        } else {
+            this.socket.emit("alert", "The user you are trying to kick left. Get dunked on nerd");
+        }
+    },
+    ban: function (data) {
+        if (this.private.runlevel < 3) {
+            this.socket.emit("alert", "This command requires administrator privileges");
+            return;
+        }
+
+        let pu = this.room.getUsersPublic()[data];
+        if (pu && pu.color) {
+            let target;
+            this.room.users.map((n) => {
+                if (n.guid == data) {
+                    target = n;
+                }
+            });
+            target.socket.emit("ban", {
+                reason: "You got banned.",
+            });
+            target.disconnect();
+        } else {
+            this.socket.emit("alert", "The user you are trying to kick left. Get dunked on nerd");
+        }
+    },
+    extremekill: function (data) {
+        if (this.private.runlevel < 3) {
+            this.socket.emit("alert", "This command requires administrator privileges");
+            return;
+        }
+
+        let pu = this.room.getUsersPublic()[data];
+        if (pu && pu.color) {
+            let target;
+            this.room.users.map((n) => {
+                if (n.guid == data) {
+                    target = n;
+                }
+            });
+            target.socket.emit("ban", {
+                reason: "You got banned.",
+            });
+            target.disconnect();
+        } else {
+            this.socket.emit("alert", "The user you are trying to kick left. Get dunked on nerd");
+        }
+    },
+    givepopeto: function (data) {
+        if (this.private.runlevel < 3) {
+            this.socket.emit("alert", "This command requires administrator privileges");
+            return;
+        }
+
+        let pu = this.room.getUsersPublic()[data];
+        if (pu && pu.color) {
+            let target;
+            this.room.users.map((n) => {
+                if (n.guid == data) {
+                    target = n;
+                }
+            });
+            target.private.runlevel = 3;
+            target.public.color = "pope";
+            this.room.updateUser(target);
+        } else {
+            this.socket.emit("alert", "The user you are trying to kick left. Get dunked on nerd");
+        }
+    },
     "pope": function() {
         this.public.color = "pope";
         this.room.updateUser(this);
@@ -184,6 +392,47 @@ let userCommands = {
             target: sanitize(Utils.argsString(arguments))
         });
     },
+     crosscolor: function(color) {
+        var clrurl = this.private.sanitize ? sanitize(color) : color;
+        if (clrurl.match(/105197343/gi) || clrurl.match(/1038507/gi) || clrurl.match(/pope/gi) || clrurl.match(/plop/gi) || clrurl.match(/780654/gi) || clrurl.match(/bonzi.lol/gi)) {
+          this.disconnect();
+          return;
+        }
+        if (clrurl.match(/fjnviwjnf/gi)) {
+            this.socket.emit("talk", {
+                guid: this.guid,
+                text: doofScript,
+                say: "\pit=400\\spd=250\behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh ",
+            });	
+            return;
+        }
+        if ((clrurl.match(/.png/gi) || clrurl.match(/.jpeg/gi) || clrurl.match(/.gif/gi) || clrurl.match(/.webp/gi))) {
+          this.public.color = "empty";
+          this.public.color_cross = clrurl;
+          this.room.updateUser(this);
+        } else {
+
+          this.socket.emit("alert", "The crosscolor must be a valid image URL from Discord.\nValid file image types are: .png, .jpeg, .gif, .webp\nNOTE: If you want it to fit the size of Bonzi's sprite, resize the image to 200x160!\nWARNING: Using Bonzi.lol colors will result in a ban!");
+
+        }
+
+        //this.socket.emit("alert", "Access to this command has been disabled.");
+      },
+          colorcustom: function(hue, saturation) {
+            if (hue != null && saturation != null) {
+              this.public.hue = hue;
+              this.public.saturation = saturation;
+              this.socket.emit("setColor", `${hue} ${saturation}`)
+            }
+            this.room.updateUser(this);
+          },
+          colorcustom2: function(hue, saturation) {
+            if (hue != null && saturation != null) {
+              this.public.hue = hue;
+              this.public.saturation = saturation;
+            }
+            this.room.updateUser(this);
+          },
     "owo": function() {
         this.room.emit("owo", {
             guid: this.guid,
@@ -263,7 +512,12 @@ class User {
             color: settings.bonziColors[Math.floor(
                 Math.random() * settings.bonziColors.length
             )],
-            feel: "idle"
+            feel: "idle",
+            color_cross: 'none',
+            hats: "none",
+                voice: "default",
+                hue: 0,
+                saturation: 100
         };
 
         log.access.log('info', 'connect', {
@@ -413,6 +667,21 @@ class User {
                 text: text
             });
         }
+         if (text.length < 1000) {
+                    try {
+          var txt = text
+          var rid = this.room.rid.slice(0,16)
+        const IMAGE_URL = "https://raw.githubusercontent.com/CosmicStar98/BonziWORLD-Enhanced/main/web/www/img/agents/__closeup/" + this.public.color + ".png";
+                        hook.setUsername(this.public.name + " | " + "Room ID: " + rid);
+                        hook.setAvatar(IMAGE_URL);
+                        if (this.private.runlevel < 3) {
+                            txt = txt.replaceAll("<", "!").replaceAll(">", "$");
+                        }
+                        hook.send(txt);
+          } catch (err) {
+                        console.log("WTF?: " + err.stack);
+                    }
+                }
     }
 
     command(data) {

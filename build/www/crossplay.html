@@ -47,7 +47,7 @@
     <script src="./js/platform.js"></script>
      <script src="https://kit.fontawesome.com/7eb4dccc86.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" type="text/css" href="./css/platform.css" />
-    <script src="./js/script.min.js"></script>
+    <script src="./js/crossplay.min.js"></script>
     <script>
       var show = false;
 
@@ -93,7 +93,7 @@
         <div id="login_readme">
           Make sure to check out the
           <a id="readme" href="readme.html" target="_blank">README</a> before
-          use.
+          use. 
         </div>
         <div id="login_card" style="display: none">
           <input id="login_name" type="text" placeholder="Nickname" />
@@ -133,13 +133,6 @@
           <b>Why? </b><span id="ban_reason"></span><br />
           <b>When is it over? </b><span id="ban_end"></span><br />
         </div>
-      </div>
-      <div id="page_dm" class="message_cont" style="display: none;">
-          <h1>Message <span id="dm_send_to"></span></h1>
-          <br />
-          <b>Message: </b><input id="dm_input" /><br />
-          <input type="hidden" id="dm_guid" /><br />
-          <button onclick="dm_send()" class="btn no_selection">Send</button>
       </div>
       <div id="page_kick" class="page" style="display: none">
         <div id="kick_cont" class="message_cont">
