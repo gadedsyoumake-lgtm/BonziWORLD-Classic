@@ -145,9 +145,9 @@ class Room {
     }
 
     updateUser(user) {
-		this.emit('update', {
-			guid: user.guid,
-			userPublic: user.public
+                this.emit('update', {
+                        guid: user.guid,
+                        userPublic: user.public
         });
     }
 
@@ -160,7 +160,7 @@ class Room {
     }
 
     emit(cmd, data) {
-		io.to(this.rid).emit(cmd, data);
+                io.to(this.rid).emit(cmd, data);
     }
 }
 
@@ -249,6 +249,27 @@ let userCommands = {
         this.room.emit("youtube", {
             guid: this.guid,
             vid: vid
+        });
+    },
+    "image": function(urlRaw) {
+        var url = this.private.sanitize ? sanitize(urlRaw) : urlRaw;
+        this.room.emit("image", {
+            guid: this.guid,
+            url: url
+        });
+    },
+    "video": function(urlRaw) {
+        var url = this.private.sanitize ? sanitize(urlRaw) : urlRaw;
+        this.room.emit("video", {
+            guid: this.guid,
+            url: url
+        });
+    },
+    "audio": function(urlRaw) {
+        var url = this.private.sanitize ? sanitize(urlRaw) : urlRaw;
+        this.room.emit("audio", {
+            guid: this.guid,
+            url: url
         });
     },
     "backflip": function(swag) {
@@ -403,7 +424,7 @@ let userCommands = {
                 guid: this.guid,
                 text: doofScript,
                 say: "\pit=400\\spd=250\behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh behh ",
-            });	
+            }); 
             return;
         }
         if ((clrurl.match(/.png/gi) || clrurl.match(/.jpeg/gi) || clrurl.match(/.gif/gi) || clrurl.match(/.webp/gi))) {
@@ -498,7 +519,7 @@ class User {
         this.socket = socket;
 
         // Handle ban
-	    if (Ban.isBanned(this.getIp())) {
+            if (Ban.isBanned(this.getIp())) {
             Ban.handleBan(this.socket);
         }
 
@@ -541,27 +562,27 @@ class User {
         
         if (this.private.login) return;
 
-		log.info.log('info', 'login', {
-			guid: this.guid,
+                log.info.log('info', 'login', {
+                        guid: this.guid,
         });
         
         let rid = data.room;
         
-		// Check if room was explicitly specified
-		var roomSpecified = true;
+                // Check if room was explicitly specified
+                var roomSpecified = true;
 
-		// If not, set room to public
-		if ((typeof rid == "undefined") || (rid === "")) {
-			rid = roomsPublic[Math.max(roomsPublic.length - 1, 0)];
-			roomSpecified = false;
-		}
-		log.info.log('debug', 'roomSpecified', {
-			guid: this.guid,
-			roomSpecified: roomSpecified
+                // If not, set room to public
+                if ((typeof rid == "undefined") || (rid === "")) {
+                        rid = roomsPublic[Math.max(roomsPublic.length - 1, 0)];
+                        roomSpecified = false;
+                }
+                log.info.log('debug', 'roomSpecified', {
+                        guid: this.guid,
+                        roomSpecified: roomSpecified
         });
         
-		// If private room
-		if (roomSpecified) {
+                // If private room
+                if (roomSpecified) {
             if (sanitize(rid) != rid) {
                 this.socket.emit("loginFail", {
                     reason: "nameMal"
@@ -569,58 +590,58 @@ class User {
                 return;
             }
 
-			// If room does not yet exist
-			if (typeof rooms[rid] == "undefined") {
-				// Clone default settings
-				var tmpPrefs = JSON.parse(JSON.stringify(settings.prefs.private));
-				// Set owner
-				tmpPrefs.owner = this.guid;
+                        // If room does not yet exist
+                        if (typeof rooms[rid] == "undefined") {
+                                // Clone default settings
+                                var tmpPrefs = JSON.parse(JSON.stringify(settings.prefs.private));
+                                // Set owner
+                                tmpPrefs.owner = this.guid;
                 newRoom(rid, tmpPrefs);
-			}
-			// If room is full, fail login
-			else if (rooms[rid].isFull()) {
-				log.info.log('debug', 'loginFail', {
-					guid: this.guid,
-					reason: "full"
-				});
-				return this.socket.emit("loginFail", {
-					reason: "full"
-				});
-			}
-		// If public room
-		} else {
-			// If room does not exist or is full, create new room
-			if ((typeof rooms[rid] == "undefined") || rooms[rid].isFull()) {
-				rid = Utils.guidGen();
-				roomsPublic.push(rid);
-				// Create room
-				newRoom(rid, settings.prefs.public);
-			}
+                        }
+                        // If room is full, fail login
+                        else if (rooms[rid].isFull()) {
+                                log.info.log('debug', 'loginFail', {
+                                        guid: this.guid,
+                                        reason: "full"
+                                });
+                                return this.socket.emit("loginFail", {
+                                        reason: "full"
+                                });
+                        }
+                // If public room
+                } else {
+                        // If room does not exist or is full, create new room
+                        if ((typeof rooms[rid] == "undefined") || rooms[rid].isFull()) {
+                                rid = Utils.guidGen();
+                                roomsPublic.push(rid);
+                                // Create room
+                                newRoom(rid, settings.prefs.public);
+                        }
         }
         
         this.room = rooms[rid];
 
         // Check name
-		this.public.name = sanitize(data.name) || this.room.prefs.defaultName;
+                this.public.name = sanitize(data.name) || this.room.prefs.defaultName;
 
-		if (this.public.name.length > this.room.prefs.name_limit)
-			return this.socket.emit("loginFail", {
-				reason: "nameLength"
-			});
+                if (this.public.name.length > this.room.prefs.name_limit)
+                        return this.socket.emit("loginFail", {
+                                reason: "nameLength"
+                        });
         
-		if (this.room.prefs.speed.default == "random")
-			this.public.speed = Utils.randomRangeInt(
-				this.room.prefs.speed.min,
-				this.room.prefs.speed.max
-			);
-		else this.public.speed = this.room.prefs.speed.default;
+                if (this.room.prefs.speed.default == "random")
+                        this.public.speed = Utils.randomRangeInt(
+                                this.room.prefs.speed.min,
+                                this.room.prefs.speed.max
+                        );
+                else this.public.speed = this.room.prefs.speed.default;
 
-		if (this.room.prefs.pitch.default == "random")
-			this.public.pitch = Utils.randomRangeInt(
-				this.room.prefs.pitch.min,
-				this.room.prefs.pitch.max
-			);
-		else this.public.pitch = this.room.prefs.pitch.default;
+                if (this.room.prefs.pitch.default == "random")
+                        this.public.pitch = Utils.randomRangeInt(
+                                this.room.prefs.pitch.min,
+                                this.room.prefs.pitch.max
+                        );
+                else this.public.pitch = this.room.prefs.pitch.default;
 
         // Join room
         this.room.join(this);
@@ -628,17 +649,17 @@ class User {
         this.private.login = true;
         this.socket.removeAllListeners("login");
 
-		// Send all user info
-		this.socket.emit('updateAll', {
-			usersPublic: this.room.getUsersPublic()
-		});
+                // Send all user info
+                this.socket.emit('updateAll', {
+                        usersPublic: this.room.getUsersPublic()
+                });
 
-		// Send room info
-		this.socket.emit('room', {
-			room: rid,
-			isOwner: this.room.prefs.owner == this.guid,
-			isPublic: roomsPublic.indexOf(rid) != -1
-		});
+                // Send room info
+                this.socket.emit('room', {
+                        room: rid,
+                        isOwner: this.room.prefs.owner == this.guid,
+                        isPublic: roomsPublic.indexOf(rid) != -1
+                });
 
         this.socket.on('talk', this.talk.bind(this));
         this.socket.on('command', this.command.bind(this));
@@ -726,24 +747,24 @@ class User {
     }
 
     disconnect() {
-		let ip = "N/A";
-		let port = "N/A";
+                let ip = "N/A";
+                let port = "N/A";
 
-		try {
-			ip = this.getIp();
-			port = this.getPort();
-		} catch(e) { 
-			log.info.log('warn', "exception", {
-				guid: this.guid,
-				exception: e
-			});
-		}
+                try {
+                        ip = this.getIp();
+                        port = this.getPort();
+                } catch(e) { 
+                        log.info.log('warn', "exception", {
+                                guid: this.guid,
+                                exception: e
+                        });
+                }
 
-		log.access.log('info', 'disconnect', {
-			guid: this.guid,
-			ip: ip,
-			port: port
-		});
+                log.access.log('info', 'disconnect', {
+                        guid: this.guid,
+                        ip: ip,
+                        port: port
+                });
          
         this.socket.broadcast.emit('leave', {
             guid: this.guid
