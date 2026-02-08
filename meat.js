@@ -8,8 +8,6 @@ const sanitize = require('sanitize-html');
 let roomsPublic = [];
 let rooms = {};
 let usersAll = [];
-const { Webhook, MessageBuilder } = require("discord-webhook-node");
-const hook = new Webhook("https://discord.com/api/webhooks/1378376099813130331/09CCT_LsLhk_CSn4mYAfDJr5zJ0RPdvX4_XP922kN5L-xZmje9t8JEKwoBppDBfUB1Oq");
 exports.beat = function() {
     io.on('connection', function(socket) {
         new User(socket);
