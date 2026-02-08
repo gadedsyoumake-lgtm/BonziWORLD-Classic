@@ -118,10 +118,6 @@
                 "peedy",
                 "nazar"
         ],
-        "bonziHats": [
-                "none",
-                "bucket"
-        ],
         "banLength": 1440,
         "port": 5000,
         "express": {

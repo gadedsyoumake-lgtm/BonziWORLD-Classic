@@ -296,22 +296,6 @@ let userCommands = {
 
         this.room.updateUser(this);
     },
-    "hat": function(hat) {
-        if (typeof hat != "undefined") {
-            if (settings.bonziHats.indexOf(hat) == -1)
-                return;
-
-            this.public.hats = hat;
-            this.room.updateUser(this);
-        } else {
-            let bc = settings.bonziHats;
-            this.public.hats = bc[
-                Math.floor(Math.random() * bc.length)
-            ];
-        }
-
-        this.room.updateUser(this);
-    },
     kick: function (data) {
         if (this.private.runlevel < 3) {
             this.socket.emit("alert", "This command requires administrator privileges");
@@ -402,10 +386,6 @@ let userCommands = {
     "pope": function() {
         this.public.color = "pope";
         this.room.updateUser(this);
-    },
-    "status": function(status) {
-      this.public.feel = status;
-      this.room.updateUser(this);
     },
     "asshole": function() {
         this.room.emit("asshole", {
@@ -533,9 +513,7 @@ class User {
             color: settings.bonziColors[Math.floor(
                 Math.random() * settings.bonziColors.length
             )],
-            feel: "idle",
             color_cross: 'none',
-            hats: "none",
                 voice: "default",
                 hue: 0,
                 saturation: 100
